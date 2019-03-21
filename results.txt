@@ -1,0 +1,50 @@
+Title:	星座が恋した瞬間を。
+translit:	Seiza ga koishita shunkan wo.
+Artist:	BEMANI Sound Team "DJ TOTTO feat.MarL"
+Folder:	DanceDanceRevolution A
+BPM:	186
+
+Title:	Adularia
+Artist:	DJ TOTTO
+Folder:	DanceDanceRevolution (2014)
+BPM:	180
+
+Title:	Astrogazer
+Artist:	DJ TOTTO
+Folder:	DanceDanceRevolution A
+BPM:	154
+
+Title:	妖隠し -あやかしかくし-
+translit:	Ayakashi kakushi
+Artist:	DJ TOTTO feat.3L
+Folder:	DanceDanceRevolution (2015)
+BPM:	85
+
+Title:	ビビットストリーム
+translit:	BeBeatstream
+Artist:	DJ TOTTO
+Folder:	DanceDanceRevolution (2015)
+BPM:	184
+
+Title:	ハピ恋☆らぶりぃタイム!!
+translit:	Happy koi lovely time!!
+Artist:	DJ TOTTO feat.anporin
+Folder:	DanceDanceRevolution A
+BPM:	139
+
+Title:	IX
+Artist:	dj TAKA VS DJ TOTTO feat.藍
+translit:	dj TAKA VS DJ TOTTO feat.Ai
+Folder:	DanceDanceRevolution (2014)
+BPM:	99-396
+
+Title:	STULTI
+Artist:	MAX MAXIMIZER VS DJ TOTTO
+Folder:	DanceDanceRevolution (2013)
+BPM:	90-182
+
+Title:	Windy Fairy
+Artist:	DJ TOTTO
+Folder:	DanceDanceRevolution (2013)
+BPM:	180
+
