@@ -8,8 +8,71 @@ from prettytable import PrettyTable
 description = '''Version one BPMbot basic functionality introduced'''
 bot = commands.Bot(command_prefix='?', description=description)
 
+def getEmbed(song):
+    title = song[0]
+    ac = 0
+    for char in title:
+        if ord(char)>3000:
+            ac+=2
+        else:
+            ac+=1
+    print (str(ac)+' : '+song[0])
+    print (str(len(song[1]))+ ' : '+song[1])
+
+    em = discord.Embed()
+    jacket ='https://furiousdcsl.github.io/jackets/'+song[5]
+    jacket = jacket.replace(' ', '%20')
+    print (jacket)
+    em.set_thumbnail(url = jacket)
+    if len(song[1])>0:
+        em.add_field(name=song[0],value=song[1], inline = True)
+    else:
+        em.add_field(name=song[0], value='\u200b', inline = True)
+    if len(song[3])>0:
+        em.add_field(name=song[2],value='\t'+song[3], inline = True)
+    else:
+        em.add_field(name=song[2], value='\u200b', inline = True)
+    em.add_field(name = 'BPM', value = song[7], inline = True)
+    em.add_field(name = 'Folder', value = song[6], inline = True)
+    return em
+
+def getBPMCEmbed(song, bpm):
+    em = getEmbed(song)
+    wantBPM = float(bpm)
+    songBPM = float(song[8])
+
+    mul = wantBPM / songBPM
+    (lowMul, highMul) = getClosestMultipiler(mul)
+
+    em.add_field(name = 'BPM conversion', value = f'```Low mul:   {lowMul:.2f}\tBPM: {lowMul*songBPM:.2f}\nIdeal mul: {mul:.2f}\tBPM: {mul*songBPM:.2f}\nHigh mul:  {highMul:.2f}\tBPM: {highMul*songBPM:.2f}```' )
+    return em
 
 def getMessage(song):
+    # message = '```'
+    # titleLen = 0
+    # title = song[0]
+    # titleTrans = song[1]
+    # for char in title:
+    #     print (char, ord(char))
+    #     if ord(char)>3000:
+    #         titleLen+=2
+    #     else:
+    #         titleLen+=1
+    # titleTransLen = len(titleTrans)
+    # message += str(titleLen) +', '+str(titleTransLen)+'\n'
+    # if titleLen<titleTransLen:
+    #     titleDiff = titleTransLen - titleLen
+    #     message += '| ' + title + ' ' * titleDiff +' |\n'
+    # else:
+    #     message += '| ' + title + ' |\n'
+    # if titleTransLen<titleLen:
+    #     titleDiff = titleLen - titleTransLen
+    #     message += '| ' + titleTrans + ' ' * titleDiff +' |\n'
+    # else:
+    #     message += '| ' + titleTrans + ' |\n'
+    #
+    # message += '```'
+
 
     x = PrettyTable()
     x.border = False
@@ -17,11 +80,11 @@ def getMessage(song):
     x.field_names = ['1','2','3','4']
     x.add_row(['Title:', song[0],'Artist:', song[2]])
     if len(song[1]) >0 and len (song[3]) >0:
-        x.add_row(['Translit:', song[1], 'Translit: ', song[3]])
+        x.add_row([' ', song[1] , ' ', song[3]] )
     elif len(song[1])>0:
-        x.add_row(['Translit:', song[1], '', ''])
+        x.add_row([' ', song[1], '', ''])
     elif len(song[3])>0:
-        x.add_row(['', '', 'Translit: ', song[3]])
+        x.add_row(['', '', ' ', song[3]])
     x.add_row(['BPM:', song[7], 'Folder:', song[6]])
     x.align['1'] = 'r'
     x.align['2'] = 'l'
@@ -29,7 +92,9 @@ def getMessage(song):
     x.align['4'] = 'l'
 
     print(x)
-    return '```'+x.get_string()+'```'
+    message = x.get_string()
+    # message += '```'
+    return message
 
 @bot.event
 async def on_ready():
@@ -46,6 +111,7 @@ async def exit(ctx):
 @bot.command()
 async def search(ctx, *, song):
     """Look for song partial matches work. (If you type "?search 300" it will show MAX 300, X-Special and SMM Mix)"""
+
     search = AceCur.execute('SELECT * FROM songs WHERE title LIKE ? OR title_translation LIKE ?', ('%'+song+'%','%'+song+'%'))
     songs = []
     for row in search:
@@ -55,10 +121,10 @@ async def search(ctx, *, song):
     for row in search:
         exact_match.append(row)
     if len(exact_match)>0:
+        em = getEmbed(exact_match[0])
+        await ctx.send(embed = em)
 
-        await ctx.send(getMessage(exact_match[0]), file=discord.File('jackets/'+exact_match[0][5],'jacket.png'))
-
-    elif len(songs)>3:
+    elif len(songs)>5:
         with open('results.txt','w',encoding='utf-8') as resultsFile:
             for item in songs:
                 resultsFile.writelines(getMessage(item))
@@ -70,21 +136,18 @@ async def search(ctx, *, song):
         await ctx.send ('No results, try again.')
     else:
         for item in songs:
-            message = getMessage(item)
-            await ctx.send(message, file=discord.File('jackets/'+item[5],'jacket.png'))
+            em = getEmbed(item)
+            await ctx.send(embed = em)
 
 @bot.command()
-async def searchartist(ctx, *, artist):
+async def sa(ctx, *, artist):
     """Look for song by artist"""
-    songs = []
-    for item in aceJSON:
-        if artist.lower() in item['artist'].lower()  or artist.lower() in item['artist_translation'].lower():
-            jacket = 'jackets/' + item['jacket']
-            songname = item['name']
-            bpm = item['bpm']
-            songs.append(item)
+    search = AceCur.execute('Select * FROM songs WHERE artist LIKE ? or artist_translation LIKE ?', ('%'+artist+'%','%'+artist+'%'))
 
-    if len(songs)>3:
+    songs = []
+    for row in search:
+        songs.append(row)
+    if len(songs)>5:
         with open('results.txt','w',encoding='utf-8') as resultsFile:
             for item in songs:
                 resultsFile.writelines(getMessage(item))
@@ -95,8 +158,41 @@ async def searchartist(ctx, *, artist):
         await ctx.send ('No results, try again.')
     else:
         for item in songs:
-            message = getMessage(item)
-            await ctx.send(embed = message, file=discord.File('jackets/'+item['jacket'],'jacket.png'))
+            message = getEmbed(item)
+            await ctx.send(embed = message)
+
+
+@bot.command()
+async def bpmc(ctx, bpm, *, song):
+    """convert song bpm to x format must be "?bpmconvert <Desired BPM> <song name>""
+        example:  ?bpmc 420 max 300
+    """
+    search = AceCur.execute('SELECT * FROM songs WHERE title LIKE ? OR title_translation LIKE ?', ('%'+song+'%','%'+song+'%'))
+    songs = []
+    for row in search:
+        songs.append(row)
+    search = AceCur.execute('SELECT * FROM songs WHERE title = ? COLLATE NOCASE or title_translation = ?  COLLATE NOCASE', (song,song))
+    exact_match = []
+    for row in search:
+        exact_match.append(row)
+    if len(exact_match)>0:
+        em = getBPMCEmbed(exact_match[0], bpm)
+        await ctx.send(embed = em)
+
+    elif len(songs)>5:
+        with open('results.txt','w',encoding='utf-8') as resultsFile:
+            for item in songs:
+                resultsFile.writelines(getBPMCMessage(item, bpm))
+                resultsFile.writelines('\n\n')
+        await ctx.send('Too many results')
+        await ctx.send(f'Here is a file with all {len(songs)}results.', file=discord.File('results.txt','results.txt'))
+
+    elif len(songs) == 0:
+        await ctx.send ('No results, try again.')
+    else:
+        for item in songs:
+            em = getBPMCEmbed(item, bpm)
+            await ctx.send(embed = em)
 
 def getClosestMultipiler(mul):
 
@@ -152,30 +248,6 @@ def getClosestMultipiler(mul):
          return(8.0,8.0)
 
 
-@bot.command()
-async def bpmconvert(ctx, bpm, *, song):
-    """convert song bpm to x format must be "?bpmconvert <Desired BPM> <full song name>"" use search function to get full song name
-        example:  ?bpmconvert 420 max 300
-
-        currently you will get an exact value so set it higher or lower to aprox desired bpm
-    """
-    for item in aceJSON:
-        if song.lower() == item['name'].lower()  or song.lower() == item['name_translation'].lower():
-            songbpm = item['bpm'].split('-')
-            songname = item['name']
-            if len(songbpm)>1:
-                songtopbpm=float(songbpm[-1])
-            else:
-                songtopbpm =float(songbpm[0])
-
-            wantbpm = float(bpm)
-            mul = wantbpm/songtopbpm
-            message = getMessage (item)
-            await ctx.send(message)
-            closestMul = getClosestMultipiler(mul)
-            message = f'Ideal multiplier:\t{mul:.2f}\tBPM:\t{wantbpm}\nLow multiplier:\t{closestMul[0]:.2f}\tBPM:\t{closestMul[0]*songtopbpm:.2f}\nHigh multiplier:\t{closestMul[1]}\tBPM:\t{closestMul[1]*songtopbpm:.2f}\n'
-            await ctx.send(message, file=discord.File('jackets/'+item['jacket'],'jacket.png'))
-
 
 
 AceDB = sqlite3.connect('ace.db')
@@ -183,4 +255,4 @@ AceCur = AceDB.cursor()
 UserDB = sqlite3.connect('user.db')
 UserCur = UserDB.cursor()
 
-bot.run('NTU2NzQzMDM1OTI1Mjk5MjAx.D3Vprg.ocdEXLhVDa0UqDTxbDbUzgXzbeE')
+bot.run('')
