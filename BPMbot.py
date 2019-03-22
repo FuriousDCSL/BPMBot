@@ -1,23 +1,35 @@
-import json
 import io
 import discord
 from discord.ext import commands
 import random
+import sqlite3
+from prettytable import PrettyTable
 
 description = '''Version one BPMbot basic functionality introduced'''
 bot = commands.Bot(command_prefix='?', description=description)
 
 
-def getMessage(item):
-    message = 'Title:\t' +item['name']
-    if len(item['name_translation'])>0:
-        message += '\ntranslit:\t'+item['name_translation']
-    message +='\nArtist:\t' + item['artist']
-    if len(item['artist_translation']):
-        message += '\ntranslit:\t' + item['artist_translation']
-    message += '\nFolder:\t' + item['folder']
-    message += '\nBPM:\t'+item['bpm']
-    return message
+def getMessage(song):
+
+    x = PrettyTable()
+    x.border = False
+    x.header = False
+    x.field_names = ['1','2','3','4']
+    x.add_row(['Title:', song[0],'Artist:', song[2]])
+    if len(song[1]) >0 and len (song[3]) >0:
+        x.add_row(['Translit:', song[1], 'Translit: ', song[3]])
+    elif len(song[1])>0:
+        x.add_row(['Translit:', song[1], '', ''])
+    elif len(song[3])>0:
+        x.add_row(['', '', 'Translit: ', song[3]])
+    x.add_row(['BPM:', song[7], 'Folder:', song[6]])
+    x.align['1'] = 'r'
+    x.align['2'] = 'l'
+    x.align['3'] = 'r'
+    x.align['4'] = 'l'
+
+    print(x)
+    return '```'+x.get_string()+'```'
 
 @bot.event
 async def on_ready():
@@ -27,32 +39,39 @@ async def on_ready():
     print('------')
 
 @bot.command()
+async def exit(ctx):
+    await ctx.send('Shutting down.')
+    await bot.logout()
+
+@bot.command()
 async def search(ctx, *, song):
     """Look for song partial matches work. (If you type "?search 300" it will show MAX 300, X-Special and SMM Mix)"""
+    search = AceCur.execute('SELECT * FROM songs WHERE title LIKE ? OR title_translation LIKE ?', ('%'+song+'%','%'+song+'%'))
     songs = []
+    for row in search:
+        songs.append(row)
+    search = AceCur.execute('SELECT * FROM songs WHERE title = ? COLLATE NOCASE or title_translation = ?  COLLATE NOCASE', (song,song))
     exact_match = []
-    for item in aceJSON:
-        if song.lower() in item['name'].lower()  or song.lower() in item['name_translation'].lower():
-            songs.append(item)
-        if song.lower() == item['name'].lower()  or song.lower() == item['name_translation'].lower():
-            exact_match.append(item)
-    if len(songs)>5:
-        if len(exact_match)>0:
-            message = 'Too many results to show all. Showing exact match.\n' + getMessage(exact_match[0])
-            await ctx.send(message, file=discord.File('jackets/'+exact_match[0]['jacket'],'jacket.png'))
-        else:
-            with open('results.txt','w',encoding='utf-8') as resultsFile:
-                for item in songs:
-                    resultsFile.writelines(getMessage(item))
-                    resultsFile.writelines('\n\n')
-            await ctx.send('Too many results')
-            await ctx.send(f'Here is a file with all {len(songs)}results.', file=discord.File('results.txt','results.txt'))
+    for row in search:
+        exact_match.append(row)
+    if len(exact_match)>0:
+
+        await ctx.send(getMessage(exact_match[0]), file=discord.File('jackets/'+exact_match[0][5],'jacket.png'))
+
+    elif len(songs)>3:
+        with open('results.txt','w',encoding='utf-8') as resultsFile:
+            for item in songs:
+                resultsFile.writelines(getMessage(item))
+                resultsFile.writelines('\n\n')
+        await ctx.send('Too many results')
+        await ctx.send(f'Here is a file with all {len(songs)}results.', file=discord.File('results.txt','results.txt'))
+
     elif len(songs) == 0:
         await ctx.send ('No results, try again.')
     else:
         for item in songs:
             message = getMessage(item)
-            await ctx.send(message, file=discord.File('jackets/'+item['jacket'],'jacket.png'))
+            await ctx.send(message, file=discord.File('jackets/'+item[5],'jacket.png'))
 
 @bot.command()
 async def searchartist(ctx, *, artist):
@@ -65,7 +84,7 @@ async def searchartist(ctx, *, artist):
             bpm = item['bpm']
             songs.append(item)
 
-    if len(songs)>5:
+    if len(songs)>3:
         with open('results.txt','w',encoding='utf-8') as resultsFile:
             for item in songs:
                 resultsFile.writelines(getMessage(item))
@@ -77,7 +96,7 @@ async def searchartist(ctx, *, artist):
     else:
         for item in songs:
             message = getMessage(item)
-            await ctx.send(message, file=discord.File('jackets/'+item['jacket'],'jacket.png'))
+            await ctx.send(embed = message, file=discord.File('jackets/'+item['jacket'],'jacket.png'))
 
 def getClosestMultipiler(mul):
 
@@ -158,7 +177,10 @@ async def bpmconvert(ctx, bpm, *, song):
             await ctx.send(message, file=discord.File('jackets/'+item['jacket'],'jacket.png'))
 
 
-with io.open('ace.json', encoding='utf-8') as aceJSONFile:
-    aceJSON = json.load(aceJSONFile)
 
-bot.run('NTU2NzU5NzMwODExMzA1OTk1.D2-ahg.jEuiAJi6_yeANWMNXY2ir7GX1ZQ')
+AceDB = sqlite3.connect('ace.db')
+AceCur = AceDB.cursor()
+UserDB = sqlite3.connect('user.db')
+UserCur = UserDB.cursor()
+
+bot.run('NTU2NzQzMDM1OTI1Mjk5MjAx.D3Vprg.ocdEXLhVDa0UqDTxbDbUzgXzbeE')
