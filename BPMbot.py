@@ -254,5 +254,7 @@ AceDB = sqlite3.connect('ace.db')
 AceCur = AceDB.cursor()
 UserDB = sqlite3.connect('user.db')
 UserCur = UserDB.cursor()
-
-bot.run('')
+with open ('bot_token.txt','r') as tokenfile:
+    token = tokenfile.readline().strip()
+print(token)
+bot.run(token)
