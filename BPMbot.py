@@ -6,7 +6,7 @@ import sqlite3
 from prettytable import PrettyTable
 
 description = '''Version one BPMbot basic functionality introduced'''
-bot = commands.Bot(command_prefix='?', description=description)
+bot = commands.Bot(command_prefix='?', description=description, case_insensitive=True)
 
 def getEmbed(song):
     title = song[0]
@@ -48,32 +48,6 @@ def getBPMCEmbed(song, bpm):
     return em
 
 def getMessage(song):
-    # message = '```'
-    # titleLen = 0
-    # title = song[0]
-    # titleTrans = song[1]
-    # for char in title:
-    #     print (char, ord(char))
-    #     if ord(char)>3000:
-    #         titleLen+=2
-    #     else:
-    #         titleLen+=1
-    # titleTransLen = len(titleTrans)
-    # message += str(titleLen) +', '+str(titleTransLen)+'\n'
-    # if titleLen<titleTransLen:
-    #     titleDiff = titleTransLen - titleLen
-    #     message += '| ' + title + ' ' * titleDiff +' |\n'
-    # else:
-    #     message += '| ' + title + ' |\n'
-    # if titleTransLen<titleLen:
-    #     titleDiff = titleLen - titleTransLen
-    #     message += '| ' + titleTrans + ' ' * titleDiff +' |\n'
-    # else:
-    #     message += '| ' + titleTrans + ' |\n'
-    #
-    # message += '```'
-
-
     x = PrettyTable()
     x.border = False
     x.header = False
@@ -93,7 +67,6 @@ def getMessage(song):
 
     print(x)
     message = x.get_string()
-    # message += '```'
     return message
 
 @bot.event
@@ -103,12 +76,21 @@ async def on_ready():
     print(bot.user.id)
     print('------')
 
-@bot.command()
-async def exit(ctx):
-    await ctx.send('Shutting down.')
-    await bot.logout()
+def isAdmin(user):
+    if user.id == 153749984599080960: # FIX ME
+        return True
+    else:
+        return False
 
-@bot.command()
+@bot.command(aliases = ['quit'])
+async def exit(ctx):
+    if isAdmin(ctx.message.author):
+        await ctx.send('Shutting down.')
+        await bot.logout()
+    else:
+        await ctx.send('Only bot admind may exit bot.')
+
+@bot.command(aliases = ['s', 'ser'])
 async def search(ctx, *, song):
     """Look for song partial matches work. (If you type "?search 300" it will show MAX 300, X-Special and SMM Mix)"""
 
@@ -139,8 +121,8 @@ async def search(ctx, *, song):
             em = getEmbed(item)
             await ctx.send(embed = em)
 
-@bot.command()
-async def sa(ctx, *, artist):
+@bot.command(aliases = ['sa'])
+async def searchartist(ctx, *, artist):
     """Look for song by artist"""
     search = AceCur.execute('Select * FROM songs WHERE artist LIKE ? or artist_translation LIKE ?', ('%'+artist+'%','%'+artist+'%'))
 
@@ -162,9 +144,9 @@ async def sa(ctx, *, artist):
             await ctx.send(embed = message)
 
 
-@bot.command()
-async def bpmc(ctx, bpm, *, song):
-    """convert song bpm to x format must be "?bpmconvert <Desired BPM> <song name>""
+@bot.command(aliases = ['bpmc', 'convert'])
+async def bpmconvert(ctx, bpm, *, song):
+    """convert song bpm to x format must be "?bpmc <Desired BPM> <song name>""
         example:  ?bpmc 420 max 300
     """
     search = AceCur.execute('SELECT * FROM songs WHERE title LIKE ? OR title_translation LIKE ?', ('%'+song+'%','%'+song+'%'))
@@ -193,6 +175,66 @@ async def bpmc(ctx, bpm, *, song):
         for item in songs:
             em = getBPMCEmbed(item, bpm)
             await ctx.send(embed = em)
+
+@bot.command()
+async def mmod(ctx, *, song):
+    """convert prefered speed to x format "?mmod <song name>"
+        example:  ?mmod max 300
+    """
+    search = UserCur.execute('SELECT mmod FROM users WHERE id = ?', (ctx.message.author.id,))
+    result = search.fetchone()
+    print(result)
+    if result == None or result[0]  == 0:
+        await ctx.send('Mmod not set. set it by entering ?setmmod <bpm>')
+        return
+    else:
+        bpm = result[0]
+
+    search = AceCur.execute('SELECT * FROM songs WHERE title LIKE ? OR title_translation LIKE ?', ('%'+song+'%','%'+song+'%'))
+    songs = []
+    for row in search:
+        songs.append(row)
+    search = AceCur.execute('SELECT * FROM songs WHERE title = ? COLLATE NOCASE or title_translation = ?  COLLATE NOCASE', (song,song))
+    exact_match = []
+    for row in search:
+        exact_match.append(row)
+    if len(exact_match)>0:
+        em = getBPMCEmbed(exact_match[0], bpm)
+        await ctx.send(embed = em)
+
+    elif len(songs)>5:
+        with open('results.txt','w',encoding='utf-8') as resultsFile:
+            for item in songs:
+                resultsFile.writelines(getBPMCMessage(item, bpm))
+                resultsFile.writelines('\n\n')
+        await ctx.send('Too many results')
+        await ctx.send(f'Here is a file with all {len(songs)}results.', file=discord.File('results.txt','results.txt'))
+
+    elif len(songs) == 0:
+        await ctx.send ('No results, try again.')
+    else:
+        for item in songs:
+            em = getBPMCEmbed(item, bpm)
+            await ctx.send(embed = em)
+
+@bot.command()
+async def setmmod(ctx, bpm):
+    """ Set mmod """
+    search = UserCur.execute('SELECT * FROM users WHERE id = ?', (ctx.message.author.id,))
+    result = search.fetchone()
+    try:
+        bpm = int (bpm)
+    except:
+        await ctx.send('Invalid BPM')
+        return
+    if result == None:
+        UserCur.execute('INSERT INTO users VALUES(?, ?, ?, ?, ?)',(ctx.message.author.id, ctx.message.author.name, bpm, 0, 0))
+    else:
+        UserCur.execute('UPDATE users SET mmod = ? where id = ?', (bpm, ctx.message.author.id))
+
+    UserDB.commit()
+    await ctx.send('mmod set.')
+
 
 def getClosestMultipiler(mul):
 
@@ -252,8 +294,19 @@ def getClosestMultipiler(mul):
 
 AceDB = sqlite3.connect('ace.db')
 AceCur = AceDB.cursor()
+
 UserDB = sqlite3.connect('user.db')
+user_table = """CREATE TABLE IF NOT EXISTS users (
+                        id INTEGER PRIMARY KEY,
+                        name TEXT,
+                        mmod INTEGER,
+                        level INTEGER,
+                        adminLevel INTEGER
+                        )"""
+
+
 UserCur = UserDB.cursor()
+UserCur.execute(user_table)
 with open ('bot_token.txt','r') as tokenfile:
     token = tokenfile.readline().strip()
 print(token)
