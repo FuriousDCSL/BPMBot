@@ -4,7 +4,7 @@ import sqlite3
 
 def parseBPM(bpm):
     bpms = bpm.split('-')
-    return [int(bpms[0]),int(bpms[-1])]
+    return [int(bpms[-1]),int(bpms[0])]
 
 def main():
     with io.open('ace.json', encoding='utf-8') as aceJSONFile:
