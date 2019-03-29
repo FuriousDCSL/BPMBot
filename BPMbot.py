@@ -3,6 +3,7 @@ import discord
 from discord.ext import commands
 import random
 import sqlite3
+import urllib
 from prettytable import PrettyTable
 
 description = '''Version one BPMbot basic functionality introduced'''
@@ -10,18 +11,18 @@ bot = commands.Bot(command_prefix='?', description=description, case_insensitive
 
 def getEmbed(song):
     title = song[0]
-    ac = 0
-    for char in title:
-        if ord(char)>3000:
-            ac+=2
-        else:
-            ac+=1
-    print (str(ac)+' : '+song[0])
-    print (str(len(song[1]))+ ' : '+song[1])
+    # ac = 0
+    # for char in title:
+    #     if ord(char)>3000:
+    #         ac+=2
+    #     else:
+    #         ac+=1
+    # print (str(ac)+' : '+song[0])
+    # print (str(len(song[1]))+ ' : '+song[1])
 
     em = discord.Embed()
-    jacket ='https://furiousdcsl.github.io/jackets/'+song[5]
-    jacket = jacket.replace(' ', '%20')
+    jacket ='https://furiousdcsl.github.io/jackets/'+urllib.parse.quote(song[5])
+    #jacket = jacket.replace(' ', '%20')
     print (jacket)
     em.set_thumbnail(url = jacket)
     if len(song[1])>0:
@@ -309,5 +310,4 @@ UserCur = UserDB.cursor()
 UserCur.execute(user_table)
 with open ('bot_token.txt','r') as tokenfile:
     token = tokenfile.readline().strip()
-print(token)
 bot.run(token)
